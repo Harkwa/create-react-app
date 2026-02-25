@@ -248,6 +248,7 @@ async function hydrateDbFromSharedBlob(dbPath: string): Promise<void> {
       cache: "no-store",
     });
     if (response.status === 404) {
+      console.error("[DB HYDRATE FAILED] Shared DB blob URL returned 404.");
       return;
     }
     if (!response.ok) {
