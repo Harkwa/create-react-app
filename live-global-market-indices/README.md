@@ -22,8 +22,9 @@ Then open the local Vite URL shown in your terminal.
 ## How data is fetched
 
 - Data source: [Stooq](https://stooq.com/)
-- Endpoint used by the app: `/stooq-api/q/l/?...`
-- The `/stooq-api` prefix is proxied by Vite in `vite.config.js` to avoid browser CORS issues during local development.
+- Endpoint used by the app: `/api/stooq`
+- Production uses a Vercel serverless function at `api/stooq.js` as a stable proxy to Stooq.
+- Local development uses Vite proxying for `/api/stooq` in `vite.config.js`.
 
 ## Notes
 

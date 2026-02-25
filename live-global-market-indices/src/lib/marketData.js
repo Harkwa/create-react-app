@@ -1,5 +1,4 @@
-const STOOQ_ENDPOINT = '/stooq-api/q/l/';
-const STOOQ_FIELDS = 'sd2t2ncohl';
+const STOOQ_ENDPOINT = '/api/stooq';
 
 export const INDEX_CONFIG = [
   { symbol: '^SPX', label: 'S&P 500', region: 'United States' },
@@ -25,10 +24,7 @@ function buildQuoteTimestamp(date, time) {
 }
 
 export async function fetchMarketIndices({ signal } = {}) {
-  const symbols = INDEX_CONFIG.map((index) => encodeURIComponent(index.symbol)).join('+');
-  const url = `${STOOQ_ENDPOINT}?s=${symbols}&f=${STOOQ_FIELDS}&h&e=json`;
-
-  const response = await fetch(url, {
+  const response = await fetch(STOOQ_ENDPOINT, {
     signal,
     headers: {
       Accept: 'application/json',
