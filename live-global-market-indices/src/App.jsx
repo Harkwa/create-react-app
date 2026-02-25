@@ -31,7 +31,7 @@ function formatSignedPoints(value) {
   return `${value >= 0 ? '+' : ''}${formatPoints(value)}`;
 }
 
-function formatUpdatedAt(timestamp, timeZone) {
+function formatUpdatedAt(timestamp, timeZone, timeZoneLabel) {
   if (!timestamp) {
     return 'N/A';
   }
@@ -46,7 +46,8 @@ function formatUpdatedAt(timestamp, timeZone) {
     return parsed.toLocaleString();
   }
 
-  return parsed.toLocaleString(undefined, { timeZone });
+  const formatted = parsed.toLocaleString(undefined, { timeZone });
+  return timeZoneLabel ? `${formatted} ${timeZoneLabel}` : formatted;
 }
 
 function getDirectionClass(change) {
@@ -165,7 +166,9 @@ function App() {
                 <span>{formatPercent(index.changePercent)}</span>
               </div>
 
-              <p className="quote-time">{formatUpdatedAt(index.quoteTimestamp, index.timeZone)}</p>
+              <p className="quote-time">
+                {formatUpdatedAt(index.quoteTimestamp, index.timeZone, index.timeZoneLabel)}
+              </p>
             </article>
           ))}
         </section>

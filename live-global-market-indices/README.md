@@ -29,4 +29,5 @@ Then open the local Vite URL shown in your terminal.
 
 - Values are market-feed values from Stooq and can be delayed depending on the exchange.
 - Feed timestamps are interpreted as UTC (GMT) and displayed in each market's local timezone (e.g. BSE in IST).
+- Cards show the timezone code next to each timestamp (e.g. `IST`, `ET`, `JST`).
 - The dashboard auto-refreshes every 20 seconds and also supports manual refresh.
