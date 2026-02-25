@@ -3,7 +3,7 @@ import Link from "next/link";
 import { AppShell } from "@/components/app-shell";
 import { StatusBanner } from "@/components/status-banner";
 import { requireUser } from "@/lib/auth";
-import { getDashboardData, listActiveLoans } from "@/lib/data";
+import { getDashboardData, listActiveLoans, listOverdueLoans } from "@/lib/data";
 import { readStatusMessage, type AppSearchParams } from "@/lib/page-helpers";
 
 function safeDate(value: string | null): string {
@@ -28,13 +28,7 @@ export default async function Home({
   const status = await readStatusMessage(searchParams);
   const stats = getDashboardData();
   const activeLoans = listActiveLoans();
-  const overdueLoans = activeLoans.filter((loan) => {
-    if (!loan.dueAt) {
-      return false;
-    }
-    const dueAt = new Date(loan.dueAt).getTime();
-    return Number.isFinite(dueAt) && dueAt < Date.now();
-  });
+  const overdueLoans = listOverdueLoans();
 
   return (
     <AppShell

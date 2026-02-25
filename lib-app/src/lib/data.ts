@@ -276,6 +276,59 @@ export function listActiveLoans(): ActiveLoan[] {
   }));
 }
 
+export function listOverdueLoans(): ActiveLoan[] {
+  const db = getDb();
+  const now = getNowIso();
+  const rows = db
+    .prepare(
+      `
+        SELECT
+          l.id,
+          l.media_item_id,
+          m.title AS media_title,
+          m.barcode AS media_barcode,
+          l.borrower_id,
+          b.name AS borrower_name,
+          l.checked_out_at,
+          l.due_at,
+          l.checked_in_at,
+          l.notes
+        FROM loans l
+        INNER JOIN media_items m ON m.id = l.media_item_id
+        INNER JOIN borrowers b ON b.id = l.borrower_id
+        WHERE l.checked_in_at IS NULL
+          AND l.due_at IS NOT NULL
+          AND l.due_at < ?
+        ORDER BY l.due_at ASC
+      `,
+    )
+    .all(now) as Array<{
+    id: number;
+    media_item_id: number;
+    media_title: string;
+    media_barcode: string | null;
+    borrower_id: number;
+    borrower_name: string;
+    checked_out_at: string;
+    due_at: string | null;
+    checked_in_at: string | null;
+    notes: string | null;
+  }>;
+
+  return rows.map((row) => ({
+    id: row.id,
+    mediaId: row.media_item_id,
+    mediaTitle: row.media_title,
+    mediaBarcode: row.media_barcode,
+    borrowerId: row.borrower_id,
+    borrowerName: row.borrower_name,
+    checkedOutAt: row.checked_out_at,
+    dueAt: row.due_at,
+    checkedInAt: row.checked_in_at,
+    notes: row.notes,
+  }));
+}
+
 export function listMediaCheckoutOptions(): MediaCheckoutOption[] {
   const db = getDb();
   const rows = db
