@@ -6,7 +6,6 @@ Simple React dashboard that tracks these major indices in near real time:
 - Dow Jones Industrial Average
 - Nasdaq Composite
 - BSE Sensex
-- Hang Seng
 - Nikkei 225
 
 ## Run locally

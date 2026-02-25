@@ -5,7 +5,6 @@ export const INDEX_CONFIG = [
   { symbol: '^DJI', label: 'Dow Jones', region: 'United States' },
   { symbol: '^NDQ', label: 'Nasdaq Composite', region: 'United States' },
   { symbol: '^SNX', label: 'BSE Sensex', region: 'India' },
-  { symbol: '^HSI', label: 'Hang Seng', region: 'Hong Kong' },
   { symbol: '^NKX', label: 'Nikkei 225', region: 'Japan' },
 ];
 
