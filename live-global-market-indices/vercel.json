@@ -1,0 +1,8 @@
+{
+  "rewrites": [
+    {
+      "source": "/stooq-api/:path*",
+      "destination": "https://stooq.com/:path*"
+    }
+  ]
+}
