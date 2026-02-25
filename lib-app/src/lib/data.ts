@@ -13,6 +13,15 @@ import type {
   UserListItem,
 } from "@/lib/types";
 
+const ENTITY_READ_RETRIES = 5;
+const ENTITY_READ_DELAY_MS = 250;
+
+async function sleep(ms: number): Promise<void> {
+  await new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
+}
+
 export async function getDashboardData(): Promise<DashboardData> {
   const db = await getDb();
   const now = getNowIso();
@@ -122,43 +131,49 @@ export async function listMediaItems(): Promise<MediaListItem[]> {
 }
 
 export async function getMediaById(id: number): Promise<MediaFormValue | null> {
-  const db = await getDb();
-  const row = db
-    .prepare(
-      `
-        SELECT id, title, media_type, creator, publication_year, barcode, notes, total_copies
-        FROM media_items
-        WHERE id = ?
-        LIMIT 1
-      `,
-    )
-    .get(id) as
-    | {
-        id: number;
-        title: string;
-        media_type: string;
-        creator: string | null;
-        publication_year: number | null;
-        barcode: string | null;
-        notes: string | null;
-        total_copies: number;
-      }
-    | undefined;
+  for (let attempt = 0; attempt < ENTITY_READ_RETRIES; attempt += 1) {
+    const db = await getDb();
+    const row = db
+      .prepare(
+        `
+          SELECT id, title, media_type, creator, publication_year, barcode, notes, total_copies
+          FROM media_items
+          WHERE id = ?
+          LIMIT 1
+        `,
+      )
+      .get(id) as
+      | {
+          id: number;
+          title: string;
+          media_type: string;
+          creator: string | null;
+          publication_year: number | null;
+          barcode: string | null;
+          notes: string | null;
+          total_copies: number;
+        }
+      | undefined;
 
-  if (!row) {
-    return null;
+    if (row) {
+      return {
+        id: row.id,
+        title: row.title,
+        mediaType: row.media_type,
+        creator: row.creator ?? "",
+        publicationYear: row.publication_year,
+        barcode: row.barcode ?? "",
+        notes: row.notes ?? "",
+        totalCopies: row.total_copies,
+      };
+    }
+
+    if (attempt < ENTITY_READ_RETRIES - 1) {
+      await sleep(ENTITY_READ_DELAY_MS);
+    }
   }
 
-  return {
-    id: row.id,
-    title: row.title,
-    mediaType: row.media_type,
-    creator: row.creator ?? "",
-    publicationYear: row.publication_year,
-    barcode: row.barcode ?? "",
-    notes: row.notes ?? "",
-    totalCopies: row.total_copies,
-  };
+  return null;
 }
 
 export async function listBorrowers(): Promise<Borrower[]> {
@@ -195,37 +210,43 @@ export async function listBorrowers(): Promise<Borrower[]> {
 export async function getBorrowerById(
   id: number,
 ): Promise<BorrowerFormValue | null> {
-  const db = await getDb();
-  const row = db
-    .prepare(
-      `
-        SELECT id, name, email, phone, notes
-        FROM borrowers
-        WHERE id = ?
-        LIMIT 1
-      `,
-    )
-    .get(id) as
-    | {
-        id: number;
-        name: string;
-        email: string | null;
-        phone: string | null;
-        notes: string | null;
-      }
-    | undefined;
+  for (let attempt = 0; attempt < ENTITY_READ_RETRIES; attempt += 1) {
+    const db = await getDb();
+    const row = db
+      .prepare(
+        `
+          SELECT id, name, email, phone, notes
+          FROM borrowers
+          WHERE id = ?
+          LIMIT 1
+        `,
+      )
+      .get(id) as
+      | {
+          id: number;
+          name: string;
+          email: string | null;
+          phone: string | null;
+          notes: string | null;
+        }
+      | undefined;
 
-  if (!row) {
-    return null;
+    if (row) {
+      return {
+        id: row.id,
+        name: row.name,
+        email: row.email ?? "",
+        phone: row.phone ?? "",
+        notes: row.notes ?? "",
+      };
+    }
+
+    if (attempt < ENTITY_READ_RETRIES - 1) {
+      await sleep(ENTITY_READ_DELAY_MS);
+    }
   }
 
-  return {
-    id: row.id,
-    name: row.name,
-    email: row.email ?? "",
-    phone: row.phone ?? "",
-    notes: row.notes ?? "",
-  };
+  return null;
 }
 
 export async function listActiveLoans(): Promise<ActiveLoan[]> {

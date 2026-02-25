@@ -12,6 +12,8 @@ import type { SessionUser } from "@/lib/types";
 const SESSION_COOKIE_NAME = "lib_app_session";
 const LOGIN_CODE_TTL_MINUTES = 10;
 const SESSION_TTL_DAYS = 7;
+const LOGIN_CODE_LOOKUP_RETRIES = 5;
+const LOGIN_CODE_LOOKUP_DELAY_MS = 250;
 const ALLOW_PLAINTEXT_CODE_FALLBACK =
   process.env.ALLOW_PLAINTEXT_LOGIN_CODE_FALLBACK !== "false";
 
@@ -116,6 +118,12 @@ function hashCode(code: string): string {
 
 function generateFiveDigitCode(): string {
   return String(Math.floor(10000 + Math.random() * 90000));
+}
+
+async function sleep(ms: number): Promise<void> {
+  await new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
 }
 
 export async function getCurrentUser(): Promise<SessionUser | null> {
@@ -245,8 +253,8 @@ export async function verifyLoginCodeAndCreateSession(
     return { success: false, message: "Code must be exactly 5 digits." };
   }
 
-  const db = await getDb();
-  const user = db
+  const userLookupDb = await getDb();
+  const user = userLookupDb
     .prepare(
       `
         SELECT id, name, email, is_admin, is_protected_admin
@@ -261,42 +269,61 @@ export async function verifyLoginCodeAndCreateSession(
     return { success: false, message: "Invalid email or code." };
   }
 
-  const now = getNowIso();
-  const latestCode = db
-    .prepare(
-      `
-        SELECT id, hashed_code, expires_at
-        FROM login_codes
-        WHERE user_id = ?
-          AND consumed_at IS NULL
-        ORDER BY created_at DESC
-        LIMIT 1
-      `,
-    )
-    .get(user.id) as { id: number; hashed_code: string; expires_at: string } | undefined;
+  const hashedInputCode = hashCode(code);
+  let latestCode:
+    | { id: number; hashed_code: string; expires_at: string }
+    | undefined;
 
-  if (!latestCode) {
-    return { success: false, message: "No active code found for this email." };
-  }
+  for (let attempt = 0; attempt < LOGIN_CODE_LOOKUP_RETRIES; attempt += 1) {
+    const db = await getDb();
+    const now = getNowIso();
+    latestCode = db
+      .prepare(
+        `
+          SELECT id, hashed_code, expires_at
+          FROM login_codes
+          WHERE user_id = ?
+            AND consumed_at IS NULL
+          ORDER BY created_at DESC
+          LIMIT 1
+        `,
+      )
+      .get(user.id) as
+      | { id: number; hashed_code: string; expires_at: string }
+      | undefined;
 
-  if (latestCode.expires_at <= now) {
+    if (!latestCode) {
+      if (attempt < LOGIN_CODE_LOOKUP_RETRIES - 1) {
+        await sleep(LOGIN_CODE_LOOKUP_DELAY_MS);
+        continue;
+      }
+      return { success: false, message: "No active code found for this email." };
+    }
+
+    if (latestCode.expires_at <= now) {
+      db.prepare("UPDATE login_codes SET consumed_at = ? WHERE id = ?").run(
+        now,
+        latestCode.id,
+      );
+      await persistDbToBlob();
+      return { success: false, message: "Code expired. Request a new code." };
+    }
+
+    if (latestCode.hashed_code !== hashedInputCode) {
+      if (attempt < LOGIN_CODE_LOOKUP_RETRIES - 1) {
+        await sleep(LOGIN_CODE_LOOKUP_DELAY_MS);
+        continue;
+      }
+      return { success: false, message: "Invalid email or code." };
+    }
+
     db.prepare("UPDATE login_codes SET consumed_at = ? WHERE id = ?").run(
       now,
       latestCode.id,
     );
     await persistDbToBlob();
-    return { success: false, message: "Code expired. Request a new code." };
+    break;
   }
-
-  if (latestCode.hashed_code !== hashCode(code)) {
-    return { success: false, message: "Invalid email or code." };
-  }
-
-  db.prepare("UPDATE login_codes SET consumed_at = ? WHERE id = ?").run(
-    now,
-    latestCode.id,
-  );
-  await persistDbToBlob();
 
   const sessionExpiresAt = new Date(
     Date.now() + SESSION_TTL_DAYS * 24 * 60 * 60_000,
