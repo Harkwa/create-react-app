@@ -3,6 +3,14 @@ import { fetchMarketIndices } from './lib/marketData';
 import './App.css';
 
 const AUTO_REFRESH_MS = 20_000;
+const STOOQ_SOURCE_OFFSET = '-01:00';
+const TIMESTAMP_FORMAT_OPTIONS = {
+  year: 'numeric',
+  month: 'numeric',
+  day: 'numeric',
+  hour: 'numeric',
+  minute: '2-digit',
+};
 
 function formatPoints(value) {
   if (value === null) {
@@ -36,17 +44,16 @@ function formatUpdatedAt(timestamp, timeZone, timeZoneLabel) {
     return 'N/A';
   }
 
-  // Stooq quote timestamps are treated as GMT/UTC.
-  const parsed = new Date(`${timestamp.replace(' ', 'T')}Z`);
+  // Stooq quote timestamps are treated as GMT-1.
+  const parsed = new Date(`${timestamp.replace(' ', 'T')}${STOOQ_SOURCE_OFFSET}`);
   if (Number.isNaN(parsed.getTime())) {
     return timestamp;
   }
 
-  if (!timeZone) {
-    return parsed.toLocaleString();
-  }
-
-  const formatted = parsed.toLocaleString(undefined, { timeZone });
+  const formatted = parsed.toLocaleString(
+    undefined,
+    timeZone ? { ...TIMESTAMP_FORMAT_OPTIONS, timeZone } : TIMESTAMP_FORMAT_OPTIONS,
+  );
   return timeZoneLabel ? `${formatted} ${timeZoneLabel}` : formatted;
 }
 
