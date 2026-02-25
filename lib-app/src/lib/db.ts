@@ -4,7 +4,7 @@ import { execSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 
-import { BlobNotFoundError, get, put } from "@vercel/blob";
+import { list, put } from "@vercel/blob";
 import Database from "better-sqlite3";
 
 let database: Database.Database | null = null;
@@ -207,22 +207,30 @@ async function hydrateDbFromSharedBlob(dbPath: string): Promise<void> {
   }
 
   try {
-    const blob = await get(SHARED_DB_BLOB_PATHNAME, {
-      access: "public",
-      useCache: false,
+    const listed = await list({
+      prefix: SHARED_DB_BLOB_PATHNAME,
+      limit: 10,
     });
-
-    if (!blob || blob.statusCode !== 200 || !blob.stream) {
+    const blob = listed.blobs.find(
+      (item) => item.pathname === SHARED_DB_BLOB_PATHNAME,
+    );
+    if (!blob) {
       return;
     }
 
-    const arrayBuffer = await new Response(blob.stream).arrayBuffer();
+    const response = await fetch(blob.url, {
+      cache: "no-store",
+    });
+    if (!response.ok) {
+      console.error(
+        `[DB HYDRATE FAILED] Could not download shared DB blob (${response.status}).`,
+      );
+      return;
+    }
+
+    const arrayBuffer = await response.arrayBuffer();
     fs.writeFileSync(dbPath, Buffer.from(arrayBuffer));
   } catch (error) {
-    if (error instanceof BlobNotFoundError) {
-      return;
-    }
-
     if (error instanceof Error) {
       console.error(`[DB HYDRATE FAILED] ${error.message}`);
       return;
