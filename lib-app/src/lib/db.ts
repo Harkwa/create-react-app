@@ -215,7 +215,7 @@ async function hydrateDbFromSharedBlob(dbPath: string): Promise<void> {
       return;
     }
 
-    const response = await fetch(blob.url, {
+    const response = await fetch(`${blob.url}?v=${Date.now()}`, {
       cache: "no-store",
     });
     if (!response.ok) {
