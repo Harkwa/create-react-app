@@ -3,7 +3,7 @@ import { fetchMarketIndices } from './lib/marketData';
 import './App.css';
 
 const AUTO_REFRESH_MS = 20_000;
-const STOOQ_SOURCE_OFFSET = '-01:00';
+const STOOQ_SOURCE_OFFSET = '+01:00';
 const TIMESTAMP_FORMAT_OPTIONS = {
   year: 'numeric',
   month: 'numeric',
@@ -44,7 +44,7 @@ function formatUpdatedAt(timestamp, timeZone, timeZoneLabel) {
     return 'N/A';
   }
 
-  // Stooq quote timestamps are treated as GMT-1.
+  // Stooq quote timestamps are treated as GMT+1.
   const parsed = new Date(`${timestamp.replace(' ', 'T')}${STOOQ_SOURCE_OFFSET}`);
   if (Number.isNaN(parsed.getTime())) {
     return timestamp;
