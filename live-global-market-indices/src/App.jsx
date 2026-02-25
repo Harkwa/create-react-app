@@ -124,9 +124,12 @@ function App() {
             {refreshing ? 'Refreshing...' : 'Refresh now'}
           </button>
           <p className="refresh-meta">
-            Last synced: <strong>{lastUpdatedAt ? new Date(lastUpdatedAt).toLocaleTimeString() : 'Never'}</strong>
-            {' | '}
-            Next update in <strong>{secondsUntilRefresh}s</strong>
+            <span>
+              Last synced: <strong>{lastUpdatedAt ? new Date(lastUpdatedAt).toLocaleTimeString() : 'Never'}</strong>
+            </span>
+            <span className="next-refresh-line">
+              Next update in <strong>{secondsUntilRefresh}s</strong>
+            </span>
           </p>
         </div>
       </header>
