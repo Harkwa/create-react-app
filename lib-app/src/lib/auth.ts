@@ -5,15 +5,14 @@ import crypto from "node:crypto";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 
-import { getDb, getNowIso, persistDbToBlob } from "@/lib/db";
+import { getDb, getNowIso } from "@/lib/db";
 import { sendLoginCodeEmail } from "@/lib/email";
 import type { SessionUser } from "@/lib/types";
 
 const SESSION_COOKIE_NAME = "lib_app_session";
+const LOGIN_CODE_COOKIE_NAME = "lib_app_login_code";
 const LOGIN_CODE_TTL_MINUTES = 10;
 const SESSION_TTL_DAYS = 7;
-const LOGIN_CODE_LOOKUP_RETRIES = 5;
-const LOGIN_CODE_LOOKUP_DELAY_MS = 250;
 const ALLOW_PLAINTEXT_CODE_FALLBACK =
   process.env.ALLOW_PLAINTEXT_LOGIN_CODE_FALLBACK !== "false";
 
@@ -34,6 +33,13 @@ type SessionPayload = {
   expiresAt: string;
 };
 
+type LoginCodePayload = {
+  uid: number;
+  email: string;
+  hashedCode: string;
+  expiresAt: string;
+};
+
 function getSessionSecret(): string {
   const explicitSecret = process.env.SESSION_SECRET?.trim();
   if (explicitSecret) {
@@ -49,6 +55,15 @@ function getSessionSecret(): string {
 }
 
 function createSessionToken(payload: SessionPayload): string {
+  const encodedPayload = Buffer.from(JSON.stringify(payload)).toString("base64url");
+  const signature = crypto
+    .createHmac("sha256", getSessionSecret())
+    .update(encodedPayload)
+    .digest("base64url");
+  return `${encodedPayload}.${signature}`;
+}
+
+function createLoginCodeToken(payload: LoginCodePayload): string {
   const encodedPayload = Buffer.from(JSON.stringify(payload)).toString("base64url");
   const signature = crypto
     .createHmac("sha256", getSessionSecret())
@@ -108,6 +123,46 @@ function parseSessionToken(token: string): SessionPayload | null {
   }
 }
 
+function parseLoginCodeToken(token: string): LoginCodePayload | null {
+  const parts = token.split(".");
+  if (parts.length !== 2) {
+    return null;
+  }
+
+  const [encodedPayload, signature] = parts;
+  if (!encodedPayload || !signature) {
+    return null;
+  }
+
+  const expectedSignature = crypto
+    .createHmac("sha256", getSessionSecret())
+    .update(encodedPayload)
+    .digest("base64url");
+
+  if (!safeCompare(signature, expectedSignature)) {
+    return null;
+  }
+
+  try {
+    const parsed = JSON.parse(
+      Buffer.from(encodedPayload, "base64url").toString("utf8"),
+    ) as LoginCodePayload;
+
+    if (
+      typeof parsed.uid !== "number" ||
+      typeof parsed.email !== "string" ||
+      typeof parsed.hashedCode !== "string" ||
+      typeof parsed.expiresAt !== "string"
+    ) {
+      return null;
+    }
+
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
 function normalizeEmail(email: string): string {
   return email.trim().toLowerCase();
 }
@@ -118,12 +173,6 @@ function hashCode(code: string): string {
 
 function generateFiveDigitCode(): string {
   return String(Math.floor(10000 + Math.random() * 90000));
-}
-
-async function sleep(ms: number): Promise<void> {
-  await new Promise((resolve) => {
-    setTimeout(resolve, ms);
-  });
 }
 
 export async function getCurrentUser(): Promise<SessionUser | null> {
@@ -206,18 +255,27 @@ export async function requestLoginCode(
   }
 
   const code = generateFiveDigitCode();
-  const now = getNowIso();
   const expiresAt = new Date(
     Date.now() + LOGIN_CODE_TTL_MINUTES * 60_000,
   ).toISOString();
 
-  db.prepare(
-    `
-      INSERT INTO login_codes(user_id, hashed_code, expires_at, consumed_at, created_at)
-      VALUES (?, ?, ?, NULL, ?)
-    `,
-  ).run(user.id, hashCode(code), expiresAt, now);
-  await persistDbToBlob();
+  const cookieStore = await cookies();
+  cookieStore.set(
+    LOGIN_CODE_COOKIE_NAME,
+    createLoginCodeToken({
+      uid: user.id,
+      email: user.email.toLowerCase(),
+      hashedCode: hashCode(code),
+      expiresAt,
+    }),
+    {
+      httpOnly: true,
+      sameSite: "lax",
+      secure: process.env.NODE_ENV === "production",
+      path: "/",
+      expires: new Date(expiresAt),
+    },
+  );
 
   const emailResult = await sendLoginCodeEmail({
     to: user.email,
@@ -269,60 +327,32 @@ export async function verifyLoginCodeAndCreateSession(
     return { success: false, message: "Invalid email or code." };
   }
 
-  const hashedInputCode = hashCode(code);
-  let latestCode:
-    | { id: number; hashed_code: string; expires_at: string }
-    | undefined;
+  const cookieStore = await cookies();
+  const loginCodeToken = cookieStore.get(LOGIN_CODE_COOKIE_NAME)?.value;
+  if (!loginCodeToken) {
+    return { success: false, message: "No active code found for this email." };
+  }
 
-  for (let attempt = 0; attempt < LOGIN_CODE_LOOKUP_RETRIES; attempt += 1) {
-    const db = await getDb();
-    const now = getNowIso();
-    latestCode = db
-      .prepare(
-        `
-          SELECT id, hashed_code, expires_at
-          FROM login_codes
-          WHERE user_id = ?
-            AND consumed_at IS NULL
-          ORDER BY created_at DESC
-          LIMIT 1
-        `,
-      )
-      .get(user.id) as
-      | { id: number; hashed_code: string; expires_at: string }
-      | undefined;
+  const loginCodePayload = parseLoginCodeToken(loginCodeToken);
+  if (!loginCodePayload) {
+    return { success: false, message: "Invalid email or code." };
+  }
 
-    if (!latestCode) {
-      if (attempt < LOGIN_CODE_LOOKUP_RETRIES - 1) {
-        await sleep(LOGIN_CODE_LOOKUP_DELAY_MS);
-        continue;
-      }
-      return { success: false, message: "No active code found for this email." };
-    }
+  if (
+    loginCodePayload.uid !== user.id ||
+    loginCodePayload.email !== email.toLowerCase()
+  ) {
+    return { success: false, message: "Invalid email or code." };
+  }
 
-    if (latestCode.expires_at <= now) {
-      db.prepare("UPDATE login_codes SET consumed_at = ? WHERE id = ?").run(
-        now,
-        latestCode.id,
-      );
-      await persistDbToBlob();
-      return { success: false, message: "Code expired. Request a new code." };
-    }
+  const now = getNowIso();
+  if (loginCodePayload.expiresAt <= now) {
+    cookieStore.delete(LOGIN_CODE_COOKIE_NAME);
+    return { success: false, message: "Code expired. Request a new code." };
+  }
 
-    if (latestCode.hashed_code !== hashedInputCode) {
-      if (attempt < LOGIN_CODE_LOOKUP_RETRIES - 1) {
-        await sleep(LOGIN_CODE_LOOKUP_DELAY_MS);
-        continue;
-      }
-      return { success: false, message: "Invalid email or code." };
-    }
-
-    db.prepare("UPDATE login_codes SET consumed_at = ? WHERE id = ?").run(
-      now,
-      latestCode.id,
-    );
-    await persistDbToBlob();
-    break;
+  if (loginCodePayload.hashedCode !== hashCode(code)) {
+    return { success: false, message: "Invalid email or code." };
   }
 
   const sessionExpiresAt = new Date(
@@ -338,7 +368,7 @@ export async function verifyLoginCodeAndCreateSession(
     expiresAt: sessionExpiresAt,
   });
 
-  const cookieStore = await cookies();
+  cookieStore.delete(LOGIN_CODE_COOKIE_NAME);
   cookieStore.set(SESSION_COOKIE_NAME, sessionToken, {
     httpOnly: true,
     sameSite: "lax",
