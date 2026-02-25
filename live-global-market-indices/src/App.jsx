@@ -3,6 +3,83 @@ import { fetchMarketIndices } from './lib/marketData';
 import './App.css';
 
 const AUTO_REFRESH_MS = 20_000;
+const TIMESTAMP_PATTERN = /^(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2}):(\d{2})$/;
+const timeZoneFormatterCache = new Map();
+
+function getTimeZoneFormatter(timeZone) {
+  if (!timeZoneFormatterCache.has(timeZone)) {
+    timeZoneFormatterCache.set(
+      timeZone,
+      new Intl.DateTimeFormat('en-CA', {
+        timeZone,
+        hour12: false,
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+      }),
+    );
+  }
+
+  return timeZoneFormatterCache.get(timeZone);
+}
+
+function getTimeZoneOffsetMs(timeZone, utcMillis) {
+  const formatter = getTimeZoneFormatter(timeZone);
+  const parts = formatter.formatToParts(new Date(utcMillis));
+  const values = {};
+
+  parts.forEach((part) => {
+    if (part.type !== 'literal') {
+      values[part.type] = part.value;
+    }
+  });
+
+  const asUtcMillis = Date.UTC(
+    Number(values.year),
+    Number(values.month) - 1,
+    Number(values.day),
+    Number(values.hour),
+    Number(values.minute),
+    Number(values.second),
+  );
+
+  return asUtcMillis - utcMillis;
+}
+
+function toLocalDateFromMarketTimestamp(timestamp, sourceTimeZone) {
+  if (!timestamp || !sourceTimeZone) {
+    return null;
+  }
+
+  const matches = TIMESTAMP_PATTERN.exec(timestamp);
+  if (!matches) {
+    return null;
+  }
+
+  const [, yearValue, monthValue, dayValue, hourValue, minuteValue, secondValue] = matches;
+  const year = Number(yearValue);
+  const month = Number(monthValue);
+  const day = Number(dayValue);
+  const hour = Number(hourValue);
+  const minute = Number(minuteValue);
+  const second = Number(secondValue);
+  const localAsUtcMillis = Date.UTC(year, month - 1, day, hour, minute, second);
+
+  let utcMillis = localAsUtcMillis;
+  for (let i = 0; i < 3; i += 1) {
+    const offset = getTimeZoneOffsetMs(sourceTimeZone, utcMillis);
+    const corrected = localAsUtcMillis - offset;
+    if (Math.abs(corrected - utcMillis) < 1) {
+      break;
+    }
+    utcMillis = corrected;
+  }
+
+  return new Date(utcMillis);
+}
 
 function formatPoints(value) {
   if (value === null) {
@@ -31,13 +108,13 @@ function formatSignedPoints(value) {
   return `${value >= 0 ? '+' : ''}${formatPoints(value)}`;
 }
 
-function formatUpdatedAt(timestamp) {
+function formatUpdatedAt(timestamp, sourceTimeZone) {
   if (!timestamp) {
     return 'N/A';
   }
 
-  const parsed = new Date(timestamp.replace(' ', 'T'));
-  if (Number.isNaN(parsed.getTime())) {
+  const parsed = toLocalDateFromMarketTimestamp(timestamp, sourceTimeZone);
+  if (!parsed || Number.isNaN(parsed.getTime())) {
     return timestamp;
   }
 
@@ -160,7 +237,7 @@ function App() {
                 <span>{formatPercent(index.changePercent)}</span>
               </div>
 
-              <p className="quote-time">{formatUpdatedAt(index.quoteTimestamp)}</p>
+              <p className="quote-time">{formatUpdatedAt(index.quoteTimestamp, index.timeZone)}</p>
             </article>
           ))}
         </section>
