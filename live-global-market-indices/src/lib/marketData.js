@@ -3,10 +3,10 @@ const STOOQ_ENDPOINT = '/api/stooq';
 export const INDEX_CONFIG = [
   { symbol: '^SPX', label: 'S&P 500', region: 'United States' },
   { symbol: '^DJI', label: 'Dow Jones', region: 'United States' },
-  { symbol: '^NDQ', label: 'Nasdaq Composite', region: 'United States' },
+  { symbol: '^NDQ', label: 'Nasdaq Comp', region: 'United States' },
   { symbol: '^SNX', label: 'BSE Sensex', region: 'India' },
   { symbol: '^NKX', label: 'Nikkei 225', region: 'Japan' },
-  { symbol: '^SHC', label: 'Shanghai Composite', region: 'China' },
+  { symbol: '^SHC', label: 'Shanghai Comp', region: 'China' },
 ];
 
 function asNumber(value) {

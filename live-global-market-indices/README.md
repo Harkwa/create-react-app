@@ -4,10 +4,10 @@ Simple React dashboard that tracks these major indices in near real time:
 
 - S&P 500
 - Dow Jones Industrial Average
-- Nasdaq Composite
+- Nasdaq Comp
 - BSE Sensex
 - Nikkei 225
-- Shanghai Composite
+- Shanghai Comp
 
 ## Run locally
 
