@@ -37,7 +37,7 @@ React/Next.js library/media catalog app with:
 - Session is stored in an HTTP-only cookie
 
 If SMTP is not configured, in development the code is printed in server logs and shown in the success message for easier local testing.
-In production, if SMTP is not configured, the app now falls back to showing the one-time code in the login success message (unless disabled).
+In production, if SMTP is not configured or delivery is rejected, the app can fall back to showing the one-time code in the login success message (unless disabled).
 
 ## Default admin email
 

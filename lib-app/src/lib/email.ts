@@ -54,18 +54,32 @@ export async function sendLoginCodeEmail({
     };
   }
 
-  await mailer.sendMail({
-    from,
-    to,
-    subject: "Your Media Catalog login code",
-    text: `Hello ${userName},\n\nYour login code is ${code}. It expires in 10 minutes.\n`,
-    html: `
-      <p>Hello ${userName},</p>
-      <p>Your Media Catalog login code is:</p>
-      <h2>${code}</h2>
-      <p>This code expires in 10 minutes.</p>
-    `,
-  });
+  try {
+    await mailer.sendMail({
+      from,
+      to,
+      subject: "Your Media Catalog login code",
+      text: `Hello ${userName},\n\nYour login code is ${code}. It expires in 10 minutes.\n`,
+      html: `
+        <p>Hello ${userName},</p>
+        <p>Your Media Catalog login code is:</p>
+        <h2>${code}</h2>
+        <p>This code expires in 10 minutes.</p>
+      `,
+    });
 
-  return { delivered: true, reason: "Email sent successfully." };
+    return { delivered: true, reason: "Email sent successfully." };
+  } catch (error) {
+    const reason =
+      error instanceof Error && error.message
+        ? error.message
+        : "Unknown SMTP error";
+
+    console.error(`[SMTP SEND FAILED] ${reason}`);
+    return {
+      delivered: false,
+      reason:
+        "Login email could not be sent. SMTP settings were rejected by the provider.",
+    };
+  }
 }
