@@ -208,7 +208,7 @@ async function hydrateDbFromSharedBlob(dbPath: string): Promise<void> {
 
   try {
     const blob = await get(SHARED_DB_BLOB_PATHNAME, {
-      access: "private",
+      access: "public",
       useCache: false,
     });
 
@@ -244,7 +244,7 @@ export async function persistDbToBlob(): Promise<void> {
 
   const fileBuffer = fs.readFileSync(dbPath);
   await put(SHARED_DB_BLOB_PATHNAME, fileBuffer, {
-    access: "private",
+    access: "public",
     addRandomSuffix: false,
     allowOverwrite: true,
     contentType: "application/x-sqlite3",
