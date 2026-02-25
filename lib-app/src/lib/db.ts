@@ -212,7 +212,7 @@ async function hydrateDbFromSharedBlob(dbPath: string): Promise<void> {
       useCache: false,
     });
 
-    if (blob.statusCode !== 200 || !blob.stream) {
+    if (!blob || blob.statusCode !== 200 || !blob.stream) {
       return;
     }
 
