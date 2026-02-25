@@ -12,6 +12,8 @@ import type { SessionUser } from "@/lib/types";
 const SESSION_COOKIE_NAME = "lib_app_session";
 const LOGIN_CODE_TTL_MINUTES = 10;
 const SESSION_TTL_DAYS = 7;
+const ALLOW_PLAINTEXT_CODE_FALLBACK =
+  process.env.ALLOW_PLAINTEXT_LOGIN_CODE_FALLBACK !== "false";
 
 type UserRow = {
   id: number;
@@ -152,10 +154,11 @@ export async function requestLoginCode(
     code,
   });
 
-  const message =
-    !emailResult.delivered && process.env.NODE_ENV !== "production"
-      ? `${emailResult.reason} Development code: ${code}`
-      : emailResult.reason;
+  const message = !emailResult.delivered
+    ? ALLOW_PLAINTEXT_CODE_FALLBACK
+      ? `${emailResult.reason} One-time code: ${code}`
+      : "Login email could not be sent. Ask your admin to configure SMTP."
+    : emailResult.reason;
 
   return {
     success: true,

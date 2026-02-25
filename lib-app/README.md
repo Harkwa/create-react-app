@@ -37,6 +37,7 @@ React/Next.js library/media catalog app with:
 - Session is stored in an HTTP-only cookie
 
 If SMTP is not configured, in development the code is printed in server logs and shown in the success message for easier local testing.
+In production, if SMTP is not configured, the app now falls back to showing the one-time code in the login success message (unless disabled).
 
 ## Default admin email
 
@@ -65,6 +66,7 @@ Important variables:
 - `ADMIN_NAME` - seeded protected admin name
 - `SQLITE_DB_PATH` - optional custom SQLite file path
 - `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM`, `SMTP_SECURE`
+- `ALLOW_PLAINTEXT_LOGIN_CODE_FALLBACK` - set `false` to disable showing login code when SMTP is missing
 
 ## Local development
 
