@@ -4,7 +4,7 @@ import { execSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 
-import { list, put } from "@vercel/blob";
+import { put } from "@vercel/blob";
 import Database from "better-sqlite3";
 
 let database: Database.Database | null = null;
@@ -198,26 +198,52 @@ function isBlobBackedSharedDbEnabled(): boolean {
   return Boolean(process.env.BLOB_READ_WRITE_TOKEN?.trim());
 }
 
+function getBlobStoreIdFromToken(): string | null {
+  const token = process.env.BLOB_READ_WRITE_TOKEN?.trim();
+  if (!token) {
+    return null;
+  }
+
+  const match = token.match(/^vercel_blob_rw_([A-Za-z0-9]+)_/);
+  if (!match?.[1]) {
+    return null;
+  }
+
+  return match[1].toLowerCase();
+}
+
+function getPublicBlobUrl(pathname: string): string | null {
+  const storeId = getBlobStoreIdFromToken();
+  if (!storeId) {
+    return null;
+  }
+
+  const encodedPathname = pathname
+    .split("/")
+    .filter((segment) => segment.length > 0)
+    .map((segment) => encodeURIComponent(segment))
+    .join("/");
+
+  return `https://${storeId}.public.blob.vercel-storage.com/${encodedPathname}`;
+}
+
 async function hydrateDbFromSharedBlob(dbPath: string): Promise<void> {
   if (!isBlobBackedSharedDbEnabled()) {
     return;
   }
 
   try {
-    const listed = await list({
-      prefix: SHARED_DB_BLOB_PATHNAME,
-      limit: 10,
-    });
-    const blob = listed.blobs.find(
-      (item) => item.pathname === SHARED_DB_BLOB_PATHNAME,
-    );
-    if (!blob) {
+    const blobUrl = getPublicBlobUrl(SHARED_DB_BLOB_PATHNAME);
+    if (!blobUrl) {
       return;
     }
 
-    const response = await fetch(`${blob.url}?v=${Date.now()}`, {
+    const response = await fetch(`${blobUrl}?v=${Date.now()}`, {
       cache: "no-store",
     });
+    if (response.status === 404) {
+      return;
+    }
     if (!response.ok) {
       console.error(
         `[DB HYDRATE FAILED] Could not download shared DB blob (${response.status}).`,
