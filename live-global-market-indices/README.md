@@ -28,5 +28,5 @@ Then open the local Vite URL shown in your terminal.
 ## Notes
 
 - Values are market-feed values from Stooq and can be delayed depending on the exchange.
-- Exchange timestamps are converted and shown in your browser's local time.
+- Timestamps are shown using each market's local date/time from the feed.
 - The dashboard auto-refreshes every 20 seconds and also supports manual refresh.
