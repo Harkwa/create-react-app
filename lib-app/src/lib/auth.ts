@@ -23,18 +23,87 @@ type UserRow = {
   is_protected_admin: number;
 };
 
-type SessionLookupRow = UserRow & {
-  expires_at: string;
+type SessionPayload = {
+  uid: number;
+  name: string;
+  email: string;
+  isAdmin: boolean;
+  isProtectedAdmin: boolean;
+  expiresAt: string;
 };
 
-function toSessionUser(row: UserRow): SessionUser {
-  return {
-    id: row.id,
-    name: row.name,
-    email: row.email,
-    isAdmin: row.is_admin === 1,
-    isProtectedAdmin: row.is_protected_admin === 1,
-  };
+function getSessionSecret(): string {
+  const explicitSecret = process.env.SESSION_SECRET?.trim();
+  if (explicitSecret) {
+    return explicitSecret;
+  }
+
+  const fallbackSecret =
+    process.env.ADMIN_EMAIL?.trim() ||
+    process.env.VERCEL_PROJECT_PRODUCTION_URL?.trim() ||
+    "lib-app-insecure-default-session-secret";
+
+  return fallbackSecret;
+}
+
+function createSessionToken(payload: SessionPayload): string {
+  const encodedPayload = Buffer.from(JSON.stringify(payload)).toString("base64url");
+  const signature = crypto
+    .createHmac("sha256", getSessionSecret())
+    .update(encodedPayload)
+    .digest("base64url");
+  return `${encodedPayload}.${signature}`;
+}
+
+function safeCompare(a: string, b: string): boolean {
+  const aBuffer = Buffer.from(a);
+  const bBuffer = Buffer.from(b);
+  if (aBuffer.length !== bBuffer.length) {
+    return false;
+  }
+  return crypto.timingSafeEqual(aBuffer, bBuffer);
+}
+
+function parseSessionToken(token: string): SessionPayload | null {
+  const parts = token.split(".");
+  if (parts.length !== 2) {
+    return null;
+  }
+
+  const [encodedPayload, signature] = parts;
+  if (!encodedPayload || !signature) {
+    return null;
+  }
+
+  const expectedSignature = crypto
+    .createHmac("sha256", getSessionSecret())
+    .update(encodedPayload)
+    .digest("base64url");
+
+  if (!safeCompare(signature, expectedSignature)) {
+    return null;
+  }
+
+  try {
+    const parsed = JSON.parse(
+      Buffer.from(encodedPayload, "base64url").toString("utf8"),
+    ) as SessionPayload;
+
+    if (
+      typeof parsed.uid !== "number" ||
+      typeof parsed.name !== "string" ||
+      typeof parsed.email !== "string" ||
+      typeof parsed.isAdmin !== "boolean" ||
+      typeof parsed.isProtectedAdmin !== "boolean" ||
+      typeof parsed.expiresAt !== "string"
+    ) {
+      return null;
+    }
+
+    return parsed;
+  } catch {
+    return null;
+  }
 }
 
 function normalizeEmail(email: string): string {
@@ -57,30 +126,25 @@ export async function getCurrentUser(): Promise<SessionUser | null> {
     return null;
   }
 
-  const db = getDb();
-  const row = db
-    .prepare(
-      `
-        SELECT u.id, u.name, u.email, u.is_admin, u.is_protected_admin, s.expires_at
-        FROM sessions s
-        INNER JOIN users u ON u.id = s.user_id
-        WHERE s.token = ?
-        LIMIT 1
-      `,
-    )
-    .get(sessionToken) as SessionLookupRow | undefined;
-
-  if (!row) {
+  const payload = parseSessionToken(sessionToken);
+  if (!payload) {
+    cookieStore.delete(SESSION_COOKIE_NAME);
     return null;
   }
 
   const now = getNowIso();
-  if (row.expires_at <= now) {
-    db.prepare("DELETE FROM sessions WHERE token = ?").run(sessionToken);
+  if (payload.expiresAt <= now) {
+    cookieStore.delete(SESSION_COOKIE_NAME);
     return null;
   }
 
-  return toSessionUser(row);
+  return {
+    id: payload.uid,
+    name: payload.name,
+    email: payload.email,
+    isAdmin: payload.isAdmin,
+    isProtectedAdmin: payload.isProtectedAdmin,
+  };
 }
 
 export async function requireUser(): Promise<SessionUser> {
@@ -233,20 +297,18 @@ export async function verifyLoginCodeAndCreateSession(
     latestCode.id,
   );
 
-  const sessionToken = crypto.randomBytes(32).toString("hex");
   const sessionExpiresAt = new Date(
     Date.now() + SESSION_TTL_DAYS * 24 * 60 * 60_000,
   ).toISOString();
 
-  db.prepare(
-    `
-      INSERT INTO sessions(user_id, token, expires_at, created_at)
-      VALUES (?, ?, ?, ?)
-    `,
-  ).run(user.id, sessionToken, sessionExpiresAt, now);
-
-  // Best-effort cleanup of stale sessions.
-  db.prepare("DELETE FROM sessions WHERE expires_at <= ?").run(now);
+  const sessionToken = createSessionToken({
+    uid: user.id,
+    name: user.name,
+    email: user.email,
+    isAdmin: user.is_admin === 1,
+    isProtectedAdmin: user.is_protected_admin === 1,
+    expiresAt: sessionExpiresAt,
+  });
 
   const cookieStore = await cookies();
   cookieStore.set(SESSION_COOKIE_NAME, sessionToken, {
@@ -262,10 +324,5 @@ export async function verifyLoginCodeAndCreateSession(
 
 export async function logoutCurrentSession(): Promise<void> {
   const cookieStore = await cookies();
-  const sessionToken = cookieStore.get(SESSION_COOKIE_NAME)?.value;
-  if (sessionToken) {
-    const db = getDb();
-    db.prepare("DELETE FROM sessions WHERE token = ?").run(sessionToken);
-  }
   cookieStore.delete(SESSION_COOKIE_NAME);
 }

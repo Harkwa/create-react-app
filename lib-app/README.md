@@ -64,6 +64,7 @@ Important variables:
 
 - `ADMIN_EMAIL` - seeded protected admin email
 - `ADMIN_NAME` - seeded protected admin name
+- `SESSION_SECRET` - secret used to sign auth session cookies
 - `SQLITE_DB_PATH` - optional custom SQLite file path
 - `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM`, `SMTP_SECURE`
 - `ALLOW_PLAINTEXT_LOGIN_CODE_FALLBACK` - set `false` to disable showing login code when SMTP is missing
