@@ -113,14 +113,8 @@ function App() {
   return (
     <main className="app-shell">
       <header className="app-header">
-        <div>
-          <h1>Live Global Market Indices</h1>
-          <p className="subtext">
-            Tracking S&amp;P 500, Dow, Nasdaq, Sensex, Hang Seng, Shanghai, and Nikkei.
-          </p>
-        </div>
-
-        <div className="controls">
+        <h1>Live Global Market Indices</h1>
+        <div className="controls-row">
           <button
             type="button"
             className="refresh-button"
@@ -130,9 +124,10 @@ function App() {
             {refreshing ? 'Refreshing...' : 'Refresh now'}
           </button>
           <p className="refresh-meta">
+            Last synced: <strong>{lastUpdatedAt ? new Date(lastUpdatedAt).toLocaleTimeString() : 'Never'}</strong>
+            {' | '}
             Next update in <strong>{secondsUntilRefresh}s</strong>
           </p>
-          <p className="refresh-meta">Last synced: {lastUpdatedAt ? new Date(lastUpdatedAt).toLocaleTimeString() : 'Never'}</p>
         </div>
       </header>
 
@@ -156,28 +151,11 @@ function App() {
               </div>
 
               <h2>{index.label}</h2>
-              <p className="source-name">{index.sourceName}</p>
-
               <p className="price">{formatPoints(index.close)}</p>
               <div className={`change-row ${getDirectionClass(index.change)}`}>
                 <span>{formatSignedPoints(index.change)}</span>
                 <span>{formatPercent(index.changePercent)}</span>
               </div>
-
-              <dl className="stats-grid">
-                <div>
-                  <dt>Open</dt>
-                  <dd>{formatPoints(index.open)}</dd>
-                </div>
-                <div>
-                  <dt>High</dt>
-                  <dd>{formatPoints(index.high)}</dd>
-                </div>
-                <div>
-                  <dt>Low</dt>
-                  <dd>{formatPoints(index.low)}</dd>
-                </div>
-              </dl>
 
               <p className="quote-time">Exchange update: {formatUpdatedAt(index.quoteTimestamp)}</p>
             </article>
