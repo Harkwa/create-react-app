@@ -1,4 +1,4 @@
-const STOOQ_SYMBOLS = '%5ESPX+%5EDJI+%5ENDQ+%5ESNX+%5ENKX';
+const STOOQ_SYMBOLS = '%5ESPX+%5EDJI+%5ENDQ+%5ESNX+%5ENKX+%5ESHC';
 const STOOQ_FIELDS = 'sd2t2ncohl';
 const STOOQ_URL = `https://stooq.com/q/l/?s=${STOOQ_SYMBOLS}&f=${STOOQ_FIELDS}&h&e=json`;
 

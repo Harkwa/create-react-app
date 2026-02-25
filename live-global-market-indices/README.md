@@ -7,6 +7,7 @@ Simple React dashboard that tracks these major indices in near real time:
 - Nasdaq Composite
 - BSE Sensex
 - Nikkei 225
+- Shanghai Composite
 
 ## Run locally
 

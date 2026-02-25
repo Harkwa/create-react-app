@@ -6,6 +6,7 @@ export const INDEX_CONFIG = [
   { symbol: '^NDQ', label: 'Nasdaq Composite', region: 'United States' },
   { symbol: '^SNX', label: 'BSE Sensex', region: 'India' },
   { symbol: '^NKX', label: 'Nikkei 225', region: 'Japan' },
+  { symbol: '^SHC', label: 'Shanghai Composite', region: 'China' },
 ];
 
 function asNumber(value) {

@@ -157,7 +157,7 @@ function App() {
                 <span>{formatPercent(index.changePercent)}</span>
               </div>
 
-              <p className="quote-time">Exchange update: {formatUpdatedAt(index.quoteTimestamp)}</p>
+              <p className="quote-time">{formatUpdatedAt(index.quoteTimestamp)}</p>
             </article>
           ))}
         </section>
