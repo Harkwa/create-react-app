@@ -36,8 +36,8 @@ function formatUpdatedAt(timestamp) {
     return 'N/A';
   }
 
-  // Stooq timestamps are already in the market's local clock time.
-  const parsed = new Date(timestamp.replace(' ', 'T'));
+  // Stooq feed timestamps behave like UTC, so convert them to browser-local time.
+  const parsed = new Date(`${timestamp.replace(' ', 'T')}Z`);
   if (Number.isNaN(parsed.getTime())) {
     return timestamp;
   }
