@@ -128,13 +128,11 @@ export async function getCurrentUser(): Promise<SessionUser | null> {
 
   const payload = parseSessionToken(sessionToken);
   if (!payload) {
-    cookieStore.delete(SESSION_COOKIE_NAME);
     return null;
   }
 
   const now = getNowIso();
   if (payload.expiresAt <= now) {
-    cookieStore.delete(SESSION_COOKIE_NAME);
     return null;
   }
 
