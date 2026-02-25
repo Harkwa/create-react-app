@@ -1,12 +1,12 @@
 const STOOQ_ENDPOINT = '/api/stooq';
 
 export const INDEX_CONFIG = [
-  { symbol: '^SPX', label: 'S&P 500', region: 'United States' },
-  { symbol: '^DJI', label: 'Dow Jones', region: 'United States' },
-  { symbol: '^NDQ', label: 'Nasdaq Comp', region: 'United States' },
-  { symbol: '^SNX', label: 'BSE Sensex', region: 'India' },
-  { symbol: '^NKX', label: 'Nikkei 225', region: 'Japan' },
-  { symbol: '^SHC', label: 'Shanghai Comp', region: 'China' },
+  { symbol: '^SPX', label: 'S&P 500', region: 'United States', timeZone: 'America/New_York' },
+  { symbol: '^DJI', label: 'Dow Jones', region: 'United States', timeZone: 'America/New_York' },
+  { symbol: '^NDQ', label: 'Nasdaq Comp', region: 'United States', timeZone: 'America/New_York' },
+  { symbol: '^SNX', label: 'BSE Sensex', region: 'India', timeZone: 'Asia/Kolkata' },
+  { symbol: '^NKX', label: 'Nikkei 225', region: 'Japan', timeZone: 'Asia/Tokyo' },
+  { symbol: '^SHC', label: 'Shanghai Comp', region: 'China', timeZone: 'Asia/Shanghai' },
 ];
 
 function asNumber(value) {
@@ -54,6 +54,7 @@ export async function fetchMarketIndices({ signal } = {}) {
       symbol: index.symbol,
       label: index.label,
       region: index.region,
+      timeZone: index.timeZone,
       sourceName: row?.name || index.label,
       close,
       open,

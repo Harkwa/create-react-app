@@ -31,18 +31,22 @@ function formatSignedPoints(value) {
   return `${value >= 0 ? '+' : ''}${formatPoints(value)}`;
 }
 
-function formatUpdatedAt(timestamp) {
+function formatUpdatedAt(timestamp, timeZone) {
   if (!timestamp) {
     return 'N/A';
   }
 
-  // Stooq feed timestamps behave like UTC, so convert them to browser-local time.
+  // Stooq quote timestamps are treated as GMT/UTC.
   const parsed = new Date(`${timestamp.replace(' ', 'T')}Z`);
   if (Number.isNaN(parsed.getTime())) {
     return timestamp;
   }
 
-  return parsed.toLocaleString();
+  if (!timeZone) {
+    return parsed.toLocaleString();
+  }
+
+  return parsed.toLocaleString(undefined, { timeZone });
 }
 
 function getDirectionClass(change) {
@@ -161,7 +165,7 @@ function App() {
                 <span>{formatPercent(index.changePercent)}</span>
               </div>
 
-              <p className="quote-time">{formatUpdatedAt(index.quoteTimestamp)}</p>
+              <p className="quote-time">{formatUpdatedAt(index.quoteTimestamp, index.timeZone)}</p>
             </article>
           ))}
         </section>
