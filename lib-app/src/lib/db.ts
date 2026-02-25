@@ -8,9 +8,6 @@ import { list, put } from "@vercel/blob";
 import Database from "better-sqlite3";
 
 let database: Database.Database | null = null;
-let lastHydratedAtMs = 0;
-
-const HYDRATE_INTERVAL_MS = 1500;
 const SHARED_DB_BLOB_PATHNAME =
   process.env.SHARED_DB_BLOB_PATHNAME?.trim() || "lib-app/lib-app.sqlite";
 
@@ -268,26 +265,19 @@ export async function persistDbToBlob(): Promise<void> {
     allowOverwrite: true,
     contentType: "application/x-sqlite3",
   });
-
-  lastHydratedAtMs = Date.now();
 }
 
 export async function getDb(): Promise<Database.Database> {
   const dbPath = resolveDatabasePath();
   ensureDirectoryForFile(dbPath);
 
-  const shouldHydrateFromBlob =
-    isBlobBackedSharedDbEnabled() &&
-    (Date.now() - lastHydratedAtMs > HYDRATE_INTERVAL_MS || !database);
-
-  if (shouldHydrateFromBlob) {
+  if (isBlobBackedSharedDbEnabled()) {
     if (database) {
       database.close();
       database = null;
     }
 
     await hydrateDbFromSharedBlob(dbPath);
-    lastHydratedAtMs = Date.now();
   }
 
   if (database) {
