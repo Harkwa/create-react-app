@@ -1,0 +1,176 @@
+.app-shell {
+  width: min(1200px, 100%);
+  margin: 0 auto;
+  padding: 2rem 1.2rem 3rem;
+}
+
+.app-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 1.2rem;
+  align-items: flex-start;
+  margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.app-header h1 {
+  margin: 0 0 0.4rem;
+  font-size: clamp(1.5rem, 2.5vw, 2.2rem);
+}
+
+.subtext {
+  margin: 0;
+  color: #54627c;
+}
+
+.controls {
+  text-align: right;
+  min-width: 220px;
+}
+
+.refresh-button {
+  background: #1d4ed8;
+  color: #fff;
+  border: 0;
+  border-radius: 10px;
+  padding: 0.62rem 1rem;
+  font-weight: 600;
+  transition: background 0.2s ease;
+}
+
+.refresh-button:hover:enabled {
+  background: #1e40af;
+}
+
+.refresh-button:disabled {
+  background: #8aa4eb;
+  cursor: not-allowed;
+}
+
+.refresh-meta {
+  margin: 0.4rem 0 0;
+  color: #4c5872;
+  font-size: 0.9rem;
+}
+
+.cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 1rem;
+}
+
+.index-card {
+  border: 1px solid #e3e8f3;
+  border-radius: 16px;
+  padding: 1rem;
+  background: #fff;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
+}
+
+.card-topline {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.region-badge {
+  display: inline-flex;
+  background: #ecf3ff;
+  color: #1d4ed8;
+  border-radius: 999px;
+  padding: 0.2rem 0.6rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.symbol-code {
+  font-size: 0.78rem;
+  color: #60708f;
+}
+
+.index-card h2 {
+  margin: 0.8rem 0 0;
+  font-size: 1.18rem;
+}
+
+.source-name {
+  margin: 0.15rem 0 0.8rem;
+  color: #6a7791;
+  font-size: 0.85rem;
+}
+
+.price {
+  margin: 0;
+  font-size: 1.8rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.change-row {
+  margin-top: 0.45rem;
+  display: flex;
+  gap: 0.85rem;
+  color: #4b5563;
+  font-weight: 600;
+}
+
+.change-row.is-up {
+  color: #0d8f48;
+}
+
+.change-row.is-down {
+  color: #d93025;
+}
+
+.stats-grid {
+  margin: 1rem 0 0;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.6rem;
+}
+
+.stats-grid div {
+  background: #f8faff;
+  border-radius: 10px;
+  padding: 0.4rem;
+}
+
+.stats-grid dt {
+  font-size: 0.75rem;
+  color: #60708f;
+}
+
+.stats-grid dd {
+  margin: 0.2rem 0 0;
+  font-weight: 600;
+  font-size: 0.85rem;
+}
+
+.quote-time {
+  margin: 0.9rem 0 0;
+  color: #60708f;
+  font-size: 0.8rem;
+}
+
+.loading-state {
+  border: 1px dashed #d2daea;
+  border-radius: 14px;
+  padding: 2rem;
+  text-align: center;
+  color: #4c5872;
+}
+
+.error-banner {
+  margin-bottom: 1rem;
+  border-radius: 10px;
+  border: 1px solid #f9b7b2;
+  background: #fff2f0;
+  color: #8a261f;
+  padding: 0.7rem 0.9rem;
+}
+
+@media (max-width: 640px) {
+  .controls {
+    text-align: left;
+  }
+}
