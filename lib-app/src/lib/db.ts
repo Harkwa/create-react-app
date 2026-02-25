@@ -4,9 +4,15 @@ import { execSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 
+import { BlobNotFoundError, get, put } from "@vercel/blob";
 import Database from "better-sqlite3";
 
 let database: Database.Database | null = null;
+let lastHydratedAtMs = 0;
+
+const HYDRATE_INTERVAL_MS = 1500;
+const SHARED_DB_BLOB_PATHNAME =
+  process.env.SHARED_DB_BLOB_PATHNAME?.trim() || "lib-app/lib-app.sqlite";
 
 function nowIso(): string {
   return new Date().toISOString();
@@ -32,7 +38,9 @@ function ensureDirectoryForFile(filePath: string): void {
   }
 }
 
-function initializeSchema(db: Database.Database): void {
+function initializeSchema(db: Database.Database): { didMutate: boolean } {
+  let didMutate = false;
+
   db.exec(`
     PRAGMA foreign_keys = ON;
 
@@ -128,7 +136,7 @@ function initializeSchema(db: Database.Database): void {
     .get() as { id: number } | undefined;
 
   if (protectedAdminRow) {
-    return;
+    return { didMutate };
   }
 
   const matchingUser = db
@@ -145,7 +153,8 @@ function initializeSchema(db: Database.Database): void {
         WHERE id = ?
       `,
     ).run(timestamp, matchingUser.id);
-    return;
+    didMutate = true;
+    return { didMutate };
   }
 
   db.prepare(
@@ -154,6 +163,8 @@ function initializeSchema(db: Database.Database): void {
       VALUES (?, ?, 1, 1, ?, ?)
     `,
   ).run(defaultAdminName, defaultAdminEmail, timestamp, timestamp);
+  didMutate = true;
+  return { didMutate };
 }
 
 function resolveDefaultAdminEmail(): string {
@@ -186,16 +197,90 @@ function resolveDefaultAdminEmail(): string {
   return "admin@example.com";
 }
 
-export function getDb(): Database.Database {
+function isBlobBackedSharedDbEnabled(): boolean {
+  return Boolean(process.env.BLOB_READ_WRITE_TOKEN?.trim());
+}
+
+async function hydrateDbFromSharedBlob(dbPath: string): Promise<void> {
+  if (!isBlobBackedSharedDbEnabled()) {
+    return;
+  }
+
+  try {
+    const blob = await get(SHARED_DB_BLOB_PATHNAME, {
+      access: "private",
+      useCache: false,
+    });
+
+    if (blob.statusCode !== 200 || !blob.stream) {
+      return;
+    }
+
+    const arrayBuffer = await new Response(blob.stream).arrayBuffer();
+    fs.writeFileSync(dbPath, Buffer.from(arrayBuffer));
+  } catch (error) {
+    if (error instanceof BlobNotFoundError) {
+      return;
+    }
+
+    if (error instanceof Error) {
+      console.error(`[DB HYDRATE FAILED] ${error.message}`);
+      return;
+    }
+
+    console.error("[DB HYDRATE FAILED] Unknown blob error");
+  }
+}
+
+export async function persistDbToBlob(): Promise<void> {
+  if (!isBlobBackedSharedDbEnabled()) {
+    return;
+  }
+
+  const dbPath = resolveDatabasePath();
+  if (!fs.existsSync(dbPath)) {
+    return;
+  }
+
+  const fileBuffer = fs.readFileSync(dbPath);
+  await put(SHARED_DB_BLOB_PATHNAME, fileBuffer, {
+    access: "private",
+    addRandomSuffix: false,
+    allowOverwrite: true,
+    contentType: "application/x-sqlite3",
+  });
+
+  lastHydratedAtMs = Date.now();
+}
+
+export async function getDb(): Promise<Database.Database> {
+  const dbPath = resolveDatabasePath();
+  ensureDirectoryForFile(dbPath);
+
+  const shouldHydrateFromBlob =
+    isBlobBackedSharedDbEnabled() &&
+    (Date.now() - lastHydratedAtMs > HYDRATE_INTERVAL_MS || !database);
+
+  if (shouldHydrateFromBlob) {
+    if (database) {
+      database.close();
+      database = null;
+    }
+
+    await hydrateDbFromSharedBlob(dbPath);
+    lastHydratedAtMs = Date.now();
+  }
+
   if (database) {
     return database;
   }
 
-  const dbPath = resolveDatabasePath();
-  ensureDirectoryForFile(dbPath);
-
   database = new Database(dbPath);
-  initializeSchema(database);
+  const schemaResult = initializeSchema(database);
+  if (schemaResult.didMutate) {
+    await persistDbToBlob();
+  }
+
   return database;
 }
 

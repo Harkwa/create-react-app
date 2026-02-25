@@ -31,9 +31,9 @@ export default async function CheckoutPage({
 }) {
   const user = await requireUser();
   const status = await readStatusMessage(searchParams);
-  const mediaOptions = listMediaCheckoutOptions();
-  const borrowers = listBorrowerOptions();
-  const activeLoans = listActiveLoans();
+  const mediaOptions = await listMediaCheckoutOptions();
+  const borrowers = await listBorrowerOptions();
+  const activeLoans = await listActiveLoans();
 
   return (
     <AppShell

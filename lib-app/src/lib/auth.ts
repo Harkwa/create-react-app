@@ -5,7 +5,7 @@ import crypto from "node:crypto";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 
-import { getDb, getNowIso } from "@/lib/db";
+import { getDb, getNowIso, persistDbToBlob } from "@/lib/db";
 import { sendLoginCodeEmail } from "@/lib/email";
 import type { SessionUser } from "@/lib/types";
 
@@ -175,7 +175,7 @@ export async function requestLoginCode(
     return { success: false, message: "Enter a valid email address." };
   }
 
-  const db = getDb();
+  const db = await getDb();
   const user = db
     .prepare(
       `
@@ -209,6 +209,7 @@ export async function requestLoginCode(
       VALUES (?, ?, ?, NULL, ?)
     `,
   ).run(user.id, hashCode(code), expiresAt, now);
+  await persistDbToBlob();
 
   const emailResult = await sendLoginCodeEmail({
     to: user.email,
@@ -244,7 +245,7 @@ export async function verifyLoginCodeAndCreateSession(
     return { success: false, message: "Code must be exactly 5 digits." };
   }
 
-  const db = getDb();
+  const db = await getDb();
   const user = db
     .prepare(
       `
@@ -283,6 +284,7 @@ export async function verifyLoginCodeAndCreateSession(
       now,
       latestCode.id,
     );
+    await persistDbToBlob();
     return { success: false, message: "Code expired. Request a new code." };
   }
 
@@ -294,6 +296,7 @@ export async function verifyLoginCodeAndCreateSession(
     now,
     latestCode.id,
   );
+  await persistDbToBlob();
 
   const sessionExpiresAt = new Date(
     Date.now() + SESSION_TTL_DAYS * 24 * 60 * 60_000,

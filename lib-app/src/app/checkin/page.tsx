@@ -24,7 +24,7 @@ export default async function CheckinPage({
 }) {
   const user = await requireUser();
   const status = await readStatusMessage(searchParams);
-  const activeLoans = listActiveLoans();
+  const activeLoans = await listActiveLoans();
 
   return (
     <AppShell

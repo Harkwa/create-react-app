@@ -26,9 +26,9 @@ export default async function Home({
 }) {
   const user = await requireUser();
   const status = await readStatusMessage(searchParams);
-  const stats = getDashboardData();
-  const activeLoans = listActiveLoans();
-  const overdueLoans = listOverdueLoans();
+  const stats = await getDashboardData();
+  const activeLoans = await listActiveLoans();
+  const overdueLoans = await listOverdueLoans();
 
   return (
     <AppShell

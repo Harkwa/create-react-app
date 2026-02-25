@@ -11,7 +11,7 @@ import {
   requireUser,
   verifyLoginCodeAndCreateSession,
 } from "@/lib/auth";
-import { getDb, getNowIso } from "@/lib/db";
+import { getDb, getNowIso, persistDbToBlob } from "@/lib/db";
 
 function textField(formData: FormData, field: string): string {
   const value = formData.get(field);
@@ -164,7 +164,7 @@ export async function createMediaItemAction(formData: FormData) {
   }
 
   try {
-    const db = getDb();
+    const db = await getDb();
     const timestamp = getNowIso();
     const publicationYear = parsePublicationYear(parsed.data.publicationYear);
 
@@ -194,6 +194,7 @@ export async function createMediaItemAction(formData: FormData) {
       timestamp,
       timestamp,
     );
+    await persistDbToBlob();
   } catch (error) {
     redirectWithMessage(
       "/media/new",
@@ -229,7 +230,7 @@ export async function updateMediaItemAction(mediaId: number, formData: FormData)
   }
 
   try {
-    const db = getDb();
+    const db = await getDb();
     const timestamp = getNowIso();
     const publicationYear = parsePublicationYear(parsed.data.publicationYear);
 
@@ -284,6 +285,7 @@ export async function updateMediaItemAction(mediaId: number, formData: FormData)
     if (result.changes === 0) {
       redirectWithMessage("/media", "error", "Media item not found.");
     }
+    await persistDbToBlob();
   } catch (error) {
     redirectWithMessage(
       `/media/${mediaId}/edit`,
@@ -301,7 +303,7 @@ export async function updateMediaItemAction(mediaId: number, formData: FormData)
 export async function deleteMediaItemAction(mediaId: number) {
   await requireUser();
 
-  const db = getDb();
+  const db = await getDb();
   const openLoanCount =
     (
       db
@@ -327,6 +329,7 @@ export async function deleteMediaItemAction(mediaId: number) {
   if (result.changes === 0) {
     redirectWithMessage("/media", "error", "Media item not found.");
   }
+  await persistDbToBlob();
 
   revalidatePath("/");
   revalidatePath("/media");
@@ -352,7 +355,7 @@ export async function createBorrowerAction(formData: FormData) {
   }
 
   try {
-    const db = getDb();
+    const db = await getDb();
     const timestamp = getNowIso();
     db.prepare(
       `
@@ -367,6 +370,7 @@ export async function createBorrowerAction(formData: FormData) {
       timestamp,
       timestamp,
     );
+    await persistDbToBlob();
   } catch (error) {
     redirectWithMessage(
       "/borrowers/new",
@@ -398,7 +402,7 @@ export async function updateBorrowerAction(borrowerId: number, formData: FormDat
     );
   }
 
-  const db = getDb();
+  const db = await getDb();
   const timestamp = getNowIso();
   const result = db
     .prepare(
@@ -420,6 +424,7 @@ export async function updateBorrowerAction(borrowerId: number, formData: FormDat
   if (result.changes === 0) {
     redirectWithMessage("/borrowers", "error", "Borrower not found.");
   }
+  await persistDbToBlob();
 
   revalidatePath("/");
   revalidatePath("/borrowers");
@@ -430,7 +435,7 @@ export async function updateBorrowerAction(borrowerId: number, formData: FormDat
 export async function deleteBorrowerAction(borrowerId: number) {
   await requireUser();
 
-  const db = getDb();
+  const db = await getDb();
   const openLoanCount =
     (
       db
@@ -456,6 +461,7 @@ export async function deleteBorrowerAction(borrowerId: number) {
   if (result.changes === 0) {
     redirectWithMessage("/borrowers", "error", "Borrower not found.");
   }
+  await persistDbToBlob();
 
   revalidatePath("/");
   revalidatePath("/borrowers");
@@ -484,7 +490,7 @@ export async function checkoutItemAction(formData: FormData) {
     );
   }
 
-  const db = getDb();
+  const db = await getDb();
   const borrower = db
     .prepare("SELECT id FROM borrowers WHERE id = ?")
     .get(borrowerId) as { id: number } | undefined;
@@ -555,6 +561,7 @@ export async function checkoutItemAction(formData: FormData) {
       VALUES (?, ?, ?, ?, NULL, ?)
     `,
   ).run(media.id, borrowerId, now, dueAtIso, toNullable(notes));
+  await persistDbToBlob();
 
   revalidatePath("/");
   revalidatePath("/media");
@@ -566,7 +573,7 @@ export async function checkoutItemAction(formData: FormData) {
 export async function checkinLoanAction(loanId: number) {
   await requireUser();
 
-  const db = getDb();
+  const db = await getDb();
   const now = getNowIso();
   const result = db
     .prepare(
@@ -582,6 +589,7 @@ export async function checkinLoanAction(loanId: number) {
   if (result.changes === 0) {
     redirectWithMessage("/checkin", "error", "Loan not found or already checked in.");
   }
+  await persistDbToBlob();
 
   revalidatePath("/");
   revalidatePath("/media");
@@ -598,7 +606,7 @@ export async function checkinByBarcodeAction(formData: FormData) {
     redirectWithMessage("/checkin", "error", "Enter or scan a barcode.");
   }
 
-  const db = getDb();
+  const db = await getDb();
   const loan = db
     .prepare(
       `
@@ -629,6 +637,7 @@ export async function checkinByBarcodeAction(formData: FormData) {
       WHERE id = ?
     `,
   ).run(now, loan.id);
+  await persistDbToBlob();
 
   revalidatePath("/");
   revalidatePath("/media");
@@ -650,7 +659,7 @@ export async function createUserAction(formData: FormData) {
   }
 
   try {
-    const db = getDb();
+    const db = await getDb();
     const timestamp = getNowIso();
     db.prepare(
       `
@@ -664,6 +673,7 @@ export async function createUserAction(formData: FormData) {
       timestamp,
       timestamp,
     );
+    await persistDbToBlob();
   } catch (error) {
     redirectWithMessage(
       "/users",
@@ -689,7 +699,7 @@ export async function updateUserAction(userId: number, formData: FormData) {
     redirectWithMessage("/users", "error", parsed.error.issues[0].message);
   }
 
-  const db = getDb();
+  const db = await getDb();
   const user = db
     .prepare(
       `
@@ -725,6 +735,7 @@ export async function updateUserAction(userId: number, formData: FormData) {
       timestamp,
       userId,
     );
+    await persistDbToBlob();
   } catch (error) {
     redirectWithMessage(
       "/users",
@@ -741,7 +752,7 @@ export async function updateUserAction(userId: number, formData: FormData) {
 export async function deleteUserAction(userId: number) {
   await requireProtectedAdminUser();
 
-  const db = getDb();
+  const db = await getDb();
   const user = db
     .prepare(
       `
@@ -762,6 +773,7 @@ export async function deleteUserAction(userId: number) {
   }
 
   db.prepare("DELETE FROM users WHERE id = ?").run(userId);
+  await persistDbToBlob();
 
   revalidatePath("/");
   revalidatePath("/users");

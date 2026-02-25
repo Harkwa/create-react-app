@@ -24,7 +24,7 @@ export default async function EditMediaPage({
     notFound();
   }
 
-  const media = getMediaById(mediaId);
+  const media = await getMediaById(mediaId);
   if (!media) {
     notFound();
   }

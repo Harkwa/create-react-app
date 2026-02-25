@@ -21,7 +21,7 @@ export default async function MediaPage({
   searchParams?: AppSearchParams;
 }) {
   const user = await requireUser();
-  const mediaItems = listMediaItems();
+  const mediaItems = await listMediaItems();
   const status = await readStatusMessage(searchParams);
 
   return (

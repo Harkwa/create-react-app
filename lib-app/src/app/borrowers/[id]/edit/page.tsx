@@ -23,7 +23,7 @@ export default async function EditBorrowerPage({
     notFound();
   }
 
-  const borrower = getBorrowerById(borrowerId);
+  const borrower = await getBorrowerById(borrowerId);
   if (!borrower) {
     notFound();
   }

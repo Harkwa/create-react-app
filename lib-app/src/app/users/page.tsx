@@ -12,7 +12,7 @@ export default async function UsersPage({
 }) {
   const user = await requireUser();
   const status = await readStatusMessage(searchParams);
-  const users = listUsers();
+  const users = await listUsers();
 
   return (
     <AppShell

@@ -3,7 +3,7 @@
 React/Next.js library/media catalog app with:
 
 - Barcode scanning
-- Local SQLite data storage
+- SQLite data model with shared persistence on Vercel Blob
 - CRUD for media items and borrowers
 - Checkout and checkin workflows
 - Dashboard home page
@@ -66,6 +66,8 @@ Important variables:
 - `ADMIN_NAME` - seeded protected admin name
 - `SESSION_SECRET` - secret used to sign auth session cookies
 - `SQLITE_DB_PATH` - optional custom SQLite file path
+- `BLOB_READ_WRITE_TOKEN` - provided automatically when Vercel Blob is linked
+- `SHARED_DB_BLOB_PATHNAME` - optional Blob pathname for the SQLite file
 - `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM`, `SMTP_SECURE`
 - `ALLOW_PLAINTEXT_LOGIN_CODE_FALLBACK` - set `false` to disable showing login code when SMTP is missing
 
@@ -95,9 +97,8 @@ npm run start
 npx vercel --prod
 ```
 
-### Important SQLite note on Vercel
+### Shared SQLite persistence on Vercel
 
-This app uses a local SQLite file. On Vercel serverless, local filesystem writes are ephemeral and not durable across deployments/instances.
-
-- For production durability, consider a managed external database.
-- Current implementation still works functionally with local SQLite semantics, but data persistence is limited by platform runtime behavior.
+When `BLOB_READ_WRITE_TOKEN` is present, the app hydrates and persists the SQLite
+database file to Vercel Blob. This avoids per-instance local filesystem drift on
+serverless and keeps data consistent across routes and deployments.

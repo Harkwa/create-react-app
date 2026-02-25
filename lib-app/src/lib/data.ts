@@ -13,8 +13,8 @@ import type {
   UserListItem,
 } from "@/lib/types";
 
-export function getDashboardData(): DashboardData {
-  const db = getDb();
+export async function getDashboardData(): Promise<DashboardData> {
+  const db = await getDb();
   const now = getNowIso();
 
   const mediaCount =
@@ -65,8 +65,8 @@ export function getDashboardData(): DashboardData {
   };
 }
 
-export function listMediaItems(): MediaListItem[] {
-  const db = getDb();
+export async function listMediaItems(): Promise<MediaListItem[]> {
+  const db = await getDb();
   const rows = db
     .prepare(
       `
@@ -121,8 +121,8 @@ export function listMediaItems(): MediaListItem[] {
   }));
 }
 
-export function getMediaById(id: number): MediaFormValue | null {
-  const db = getDb();
+export async function getMediaById(id: number): Promise<MediaFormValue | null> {
+  const db = await getDb();
   const row = db
     .prepare(
       `
@@ -161,8 +161,8 @@ export function getMediaById(id: number): MediaFormValue | null {
   };
 }
 
-export function listBorrowers(): Borrower[] {
-  const db = getDb();
+export async function listBorrowers(): Promise<Borrower[]> {
+  const db = await getDb();
   const rows = db
     .prepare(
       `
@@ -192,8 +192,10 @@ export function listBorrowers(): Borrower[] {
   }));
 }
 
-export function getBorrowerById(id: number): BorrowerFormValue | null {
-  const db = getDb();
+export async function getBorrowerById(
+  id: number,
+): Promise<BorrowerFormValue | null> {
+  const db = await getDb();
   const row = db
     .prepare(
       `
@@ -226,8 +228,8 @@ export function getBorrowerById(id: number): BorrowerFormValue | null {
   };
 }
 
-export function listActiveLoans(): ActiveLoan[] {
-  const db = getDb();
+export async function listActiveLoans(): Promise<ActiveLoan[]> {
+  const db = await getDb();
   const rows = db
     .prepare(
       `
@@ -276,8 +278,8 @@ export function listActiveLoans(): ActiveLoan[] {
   }));
 }
 
-export function listOverdueLoans(): ActiveLoan[] {
-  const db = getDb();
+export async function listOverdueLoans(): Promise<ActiveLoan[]> {
+  const db = await getDb();
   const now = getNowIso();
   const rows = db
     .prepare(
@@ -329,8 +331,8 @@ export function listOverdueLoans(): ActiveLoan[] {
   }));
 }
 
-export function listMediaCheckoutOptions(): MediaCheckoutOption[] {
-  const db = getDb();
+export async function listMediaCheckoutOptions(): Promise<MediaCheckoutOption[]> {
+  const db = await getDb();
   const rows = db
     .prepare(
       `
@@ -365,8 +367,8 @@ export function listMediaCheckoutOptions(): MediaCheckoutOption[] {
   }));
 }
 
-export function listBorrowerOptions(): BorrowerOption[] {
-  const db = getDb();
+export async function listBorrowerOptions(): Promise<BorrowerOption[]> {
+  const db = await getDb();
   const rows = db
     .prepare(
       `
@@ -380,8 +382,8 @@ export function listBorrowerOptions(): BorrowerOption[] {
   return rows;
 }
 
-export function listUsers(): UserListItem[] {
-  const db = getDb();
+export async function listUsers(): Promise<UserListItem[]> {
+  const db = await getDb();
   const rows = db
     .prepare(
       `

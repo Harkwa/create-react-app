@@ -21,7 +21,7 @@ export default async function BorrowersPage({
   searchParams?: AppSearchParams;
 }) {
   const user = await requireUser();
-  const borrowers = listBorrowers();
+  const borrowers = await listBorrowers();
   const status = await readStatusMessage(searchParams);
 
   return (
