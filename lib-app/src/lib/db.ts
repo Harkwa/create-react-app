@@ -11,6 +11,12 @@ let database: Database.Database | null = null;
 const SHARED_DB_BLOB_PATHNAME =
   process.env.SHARED_DB_BLOB_PATHNAME?.trim() || "lib-app/lib-app.sqlite";
 
+async function sleep(ms: number): Promise<void> {
+  await new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
+}
+
 function nowIso(): string {
   return new Date().toISOString();
 }
@@ -291,6 +297,9 @@ export async function persistDbToBlob(): Promise<void> {
     allowOverwrite: true,
     contentType: "application/x-sqlite3",
   });
+
+  // Blob write propagation is eventually consistent across serverless instances.
+  await sleep(300);
 }
 
 export async function getDb(): Promise<Database.Database> {
