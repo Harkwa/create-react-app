@@ -250,6 +250,17 @@ export async function persistDbToBlob(): Promise<void> {
     return;
   }
 
+  // Ensure all SQLite pages are flushed to disk before upload.
+  if (database) {
+    try {
+      database.pragma("wal_checkpoint(TRUNCATE)");
+    } catch {
+      // Ignore when WAL mode is not in use.
+    }
+    database.close();
+    database = null;
+  }
+
   const fileBuffer = fs.readFileSync(dbPath);
   await put(SHARED_DB_BLOB_PATHNAME, fileBuffer, {
     access: "public",
@@ -287,6 +298,7 @@ export async function getDb(): Promise<Database.Database> {
   const schemaResult = initializeSchema(database);
   if (schemaResult.didMutate) {
     await persistDbToBlob();
+    database = new Database(dbPath);
   }
 
   return database;
