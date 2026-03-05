@@ -1,0 +1,104 @@
+# Library Media Catalog App
+
+React/Next.js library/media catalog app with:
+
+- Barcode scanning
+- SQLite data model with shared persistence on Vercel Blob
+- CRUD for media items and borrowers
+- Checkout and checkin workflows
+- Dashboard home page
+- User maintenance page
+- Passwordless login by 5-digit email code
+- Protected admin user rules
+
+## Features implemented
+
+### Catalog + lending
+
+- **Media items**: add/edit/delete, barcode, metadata, copy counts
+- **Borrowers**: add/edit/delete with contact details
+- **Checkout**: assign item to borrower by selection or barcode
+- **Checkin**: return by barcode or active-loan row action
+- **Dashboard**: totals and overdue highlights
+
+### Users + access control
+
+- Users are maintained in `/users`
+- Only the **protected admin user** can add/modify/delete users
+- The protected admin user **cannot be deleted**
+- No passwords are used
+
+### Passwordless login
+
+- User enters email at `/login`
+- App generates a **5-digit code**
+- Code is emailed via SMTP configuration
+- User verifies code at `/login/verify`
+- Session is stored in an HTTP-only cookie
+
+If SMTP is not configured, in development the code is printed in server logs and shown in the success message for easier local testing.
+In production, if SMTP is not configured or delivery is rejected, the app can fall back to showing the one-time code in the login success message (unless disabled).
+
+## Default admin email
+
+On first database initialization, the app seeds a protected admin user.
+
+Default admin email resolution order:
+
+1. `ADMIN_EMAIL` env var
+2. `DEFAULT_ADMIN_EMAIL` env var
+3. `git config user.email` value (if available)
+4. fallback: `admin@example.com`
+
+Set `ADMIN_EMAIL` to your own email before first run for best results.
+
+## Environment variables
+
+Copy `.env.example` to `.env.local` and update values:
+
+```bash
+cp .env.example .env.local
+```
+
+Important variables:
+
+- `ADMIN_EMAIL` - seeded protected admin email
+- `ADMIN_NAME` - seeded protected admin name
+- `SESSION_SECRET` - secret used to sign auth session cookies
+- `SQLITE_DB_PATH` - optional custom SQLite file path
+- `BLOB_READ_WRITE_TOKEN` - provided automatically when Vercel Blob is linked
+- `SHARED_DB_BLOB_PATHNAME` - optional Blob pathname for the SQLite file
+- `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM`, `SMTP_SECURE`
+- `ALLOW_PLAINTEXT_LOGIN_CODE_FALLBACK` - set `false` to disable showing login code when SMTP is missing
+
+## Local development
+
+```bash
+npm install
+npm run dev
+```
+
+Open `http://localhost:3000`.
+
+## Build and run
+
+```bash
+npm run build
+npm run start
+```
+
+## Deploy to Vercel
+
+1. Create a Vercel project linked to this folder/repo.
+2. Add the environment variables listed above in Vercel project settings.
+3. Deploy:
+
+```bash
+npx vercel --prod
+```
+
+### Shared SQLite persistence on Vercel
+
+When `BLOB_READ_WRITE_TOKEN` is present, the app hydrates and persists the SQLite
+database file to Vercel Blob. This avoids per-instance local filesystem drift on
+serverless and keeps data consistent across routes and deployments.
